@@ -23,7 +23,7 @@ Installation
 - Clone the osi-cpp repository, including sub-modules:
 
   ```console
-  git clone --recurse-submodules https://github.com/PMSFIT/osi-cpp.git
+  git clone --recurse-submodules https://github.com/OpenSimulationInterface/osi-cpp.git
   ```
 
 - Switch to the repository directory:
