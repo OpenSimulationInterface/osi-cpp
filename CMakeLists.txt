@@ -1,25 +1,21 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(open_simulation_interface)
-
 # Toplevel check
 set(OSI_IS_TOP_LEVEL OFF)
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
   set(OSI_IS_TOP_LEVEL ON)
 endif()
 
-# Set the C++ standard
-set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to be used")
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-if(MSVC)
-  add_compile_options(/wd4141 /wd4244 /wd4251 /wd4267 /wd4305 /wd4355 /wd4800 /wd4996)
-endif()
-
 # Set a default build type if none was specified
 set(default_build_type "Release")
-if(EXISTS "${CMAKE_SOURCE_DIR}/.git")
-  set(default_build_type "Debug")
+
+if(OSI_IS_TOP_LEVEL AND NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
+  set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE
+      STRING "Choose the type of build." FORCE)
+  # Set the possible values of build type for cmake-gui
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+               "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
 # read the version number from the file "VERSION"
@@ -32,18 +28,24 @@ foreach(LINE ${VERSION_CONTENTS})
 endforeach()
 set(OPEN_SIMULATION_INTERFACE_VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH})
 
+project(
+  open_simulation_interface
+  DESCRIPTION "A generic interface for the environmental perception of automated driving functions in virtual scenarios."
+  HOMEPAGE_URL "https://github.com/OpenSimulationInterface/open-simulation-interface"
+  VERSION ${OPEN_SIMULATION_INTERFACE_VERSION}
+  LANGUAGES CXX
+)
+
+# Set the C++ standard
+set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to be used")
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+if(MSVC)
+  add_compile_options(/wd4141 /wd4244 /wd4251 /wd4267 /wd4305 /wd4355 /wd4800 /wd4996)
+endif()
+
 set(${PROJECT_NAME}_SOVERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 set(${PROJECT_NAME}_LIBVERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
-
-# configure build version
-if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
-  set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE
-      STRING "Choose the type of build." FORCE)
-  # Set the possible values of build type for cmake-gui
-  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
-               "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
-endif()
 
 # Offer the user the choice of overriding the installation directories
 set(OSI_INSTALL_LIB_DIR lib CACHE PATH "Installation directory for libraries")
@@ -56,7 +58,7 @@ else()
 endif()
 set(OSI_INSTALL_CMAKE_DIR ${DEF_INSTALL_CMAKE_DIR} CACHE PATH "Installation directory for CMake files")
 
-set(OSI_INSTALL_LIB_DIR ${OSI_INSTALL_LIB_DIR}/osi${VERSION_MAJOR})
+set(OSI_INSTALL_LIB_DIR ${OSI_INSTALL_LIB_DIR})
 set(OSI_INSTALL_INCLUDE_DIR ${OSI_INSTALL_INCLUDE_DIR}/osi${VERSION_MAJOR})
 
 configure_file(open-simulation-interface/osi_version.proto.in osi_version.proto)
