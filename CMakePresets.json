@@ -23,7 +23,8 @@
     },
     {
       "name": "vcpkg-windows",
-      "configurePreset": "vcpkg-windows"
+      "configurePreset": "vcpkg-windows",
+      "configuration": "Release"
     }
   ]
 }

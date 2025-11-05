@@ -13,9 +13,10 @@ if(OSI_IS_TOP_LEVEL AND NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
   set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE
       STRING "Choose the type of build." FORCE)
+  set(CMAKE_CONFIGURATION_TYPES "Release;RelWithDebInfo;MinSizeRel;Debug" CACHE STRING "" FORCE)
   # Set the possible values of build type for cmake-gui
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
-               "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+               "Release" "MinSizeRel" "RelWithDebInfo" "Debug")
 endif()
 
 # read the version number from the file "VERSION"
@@ -40,6 +41,7 @@ project(
 set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to be used")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Suppress protobuf code warnings for MSVC
 if(MSVC)
   add_compile_options(/wd4141 /wd4244 /wd4251 /wd4267 /wd4305 /wd4355 /wd4800 /wd4996)
 endif()
@@ -64,16 +66,18 @@ set(OSI_INSTALL_INCLUDE_DIR ${OSI_INSTALL_INCLUDE_DIR}/osi${VERSION_MAJOR})
 configure_file(open-simulation-interface/osi_version.proto.in osi_version.proto)
 
 find_package(Protobuf REQUIRED)
-include_directories(${Protobuf_INCLUDE_DIRS})
 
 file(GLOB OSI_PROTO_FILES open-simulation-interface/*.proto)
 list(INSERT OSI_PROTO_FILES 0 ${CMAKE_CURRENT_BINARY_DIR}/osi_version.proto)
 
 protobuf_generate_cpp(PROTO_SRCS PROTO_HEADERS ${OSI_PROTO_FILES})
 
+# Static library
 add_library(${PROJECT_NAME}_static STATIC ${PROTO_SRCS} ${PROTO_HEADERS})
 add_library(${PROJECT_NAME}::${PROJECT_NAME}_static ALIAS ${PROJECT_NAME}_static)
 target_include_directories(${PROJECT_NAME}_static
+    PRIVATE
+        ${Protobuf_INCLUDE_DIRS}
     PUBLIC
         ${PROTOBUF_INCLUDE_DIR}
         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
@@ -84,10 +88,12 @@ install(TARGETS ${PROJECT_NAME}_static
         EXPORT ${PROJECT_NAME}_targets
         ARCHIVE DESTINATION "${OSI_INSTALL_LIB_DIR}" COMPONENT lib)
 
-
+# Position independent object library for shared/pic libraries
 add_library(${PROJECT_NAME}_obj OBJECT ${PROTO_SRCS} ${PROTO_HEADERS})
 add_library(${PROJECT_NAME}::${PROJECT_NAME}_obj ALIAS ${PROJECT_NAME}_obj)
 target_include_directories(${PROJECT_NAME}_obj
+    PRIVATE
+        ${Protobuf_INCLUDE_DIRS}
     PUBLIC
         ${PROTOBUF_INCLUDE_DIR}
         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
@@ -95,42 +101,37 @@ target_include_directories(${PROJECT_NAME}_obj
 )
 set_property(TARGET ${PROJECT_NAME}_obj PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-
+# Static position independent code library for use in shared libraries
 add_library(${PROJECT_NAME}_pic STATIC $<TARGET_OBJECTS:${PROJECT_NAME}_obj>)
 add_library(${PROJECT_NAME}::${PROJECT_NAME}_pic ALIAS ${PROJECT_NAME}_pic)
 target_include_directories(${PROJECT_NAME}_pic
+    PRIVATE
+        ${Protobuf_INCLUDE_DIRS}
     PUBLIC
         ${PROTOBUF_INCLUDE_DIR}
         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
         $<INSTALL_INTERFACE:${OSI_INSTALL_INCLUDE_DIR}>
 )
 target_link_libraries(${PROJECT_NAME}_pic PUBLIC protobuf::libprotobuf)
-
 set_property(TARGET ${PROJECT_NAME}_pic PROPERTY POSITION_INDEPENDENT_CODE ON)
-
 install(TARGETS ${PROJECT_NAME}_pic
         EXPORT ${PROJECT_NAME}_targets
         ARCHIVE DESTINATION "${OSI_INSTALL_LIB_DIR}" COMPONENT lib)
 
+# Shared library
 add_library(${PROJECT_NAME} SHARED $<TARGET_OBJECTS:${PROJECT_NAME}_obj>)
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME}
+    PRIVATE
+        ${Protobuf_INCLUDE_DIRS}
     PUBLIC
         ${PROTOBUF_INCLUDE_DIR}
         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
         $<INSTALL_INTERFACE:${OSI_INSTALL_INCLUDE_DIR}>
 )
-
-set_property(
-    TARGET ${PROJECT_NAME}
-    PROPERTY SOVERSION ${${PROJECT_NAME}_SOVERSION}
-)
-set_property(
-    TARGET ${PROJECT_NAME}
-    PROPERTY VERSION ${${PROJECT_NAME}_LIBVERSION}
-)
-
 target_link_libraries(${PROJECT_NAME} PUBLIC protobuf::libprotobuf)
+set_property(TARGET ${PROJECT_NAME} PROPERTY SOVERSION ${${PROJECT_NAME}_SOVERSION})
+set_property(TARGET ${PROJECT_NAME} PROPERTY VERSION ${${PROJECT_NAME}_LIBVERSION})
 install(TARGETS ${PROJECT_NAME}
         EXPORT ${PROJECT_NAME}_targets
         DESTINATION "${OSI_INSTALL_LIB_DIR}" COMPONENT lib)
