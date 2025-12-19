@@ -27,7 +27,7 @@ jobs:
           cd ..
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add .
+          git add open-simulation-interface
           git commit -m "OSI submodule updated"
         continue-on-error: true
 
