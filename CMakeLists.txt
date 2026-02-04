@@ -65,7 +65,10 @@ set(OSI_INSTALL_INCLUDE_DIR ${OSI_INSTALL_INCLUDE_DIR}/osi${VERSION_MAJOR})
 
 configure_file(open-simulation-interface/osi_version.proto.in osi_version.proto)
 
-find_package(Protobuf REQUIRED)
+find_package(Protobuf CONFIG QUIET)
+if(NOT Protobuf_FOUND)
+    find_package(Protobuf REQUIRED)
+endif()
 
 file(GLOB OSI_PROTO_FILES open-simulation-interface/*.proto)
 list(INSERT OSI_PROTO_FILES 0 ${CMAKE_CURRENT_BINARY_DIR}/osi_version.proto)
@@ -84,6 +87,13 @@ target_include_directories(${PROJECT_NAME}_static
         $<INSTALL_INTERFACE:${OSI_INSTALL_INCLUDE_DIR}>
 )
 target_link_libraries(${PROJECT_NAME}_static PUBLIC protobuf::libprotobuf)
+find_package(absl CONFIG QUIET)
+if(TARGET absl::log)
+    target_link_libraries(${PROJECT_NAME}_static PUBLIC absl::log)
+endif()
+if(TARGET absl::log_internal_check_op)
+    target_link_libraries(${PROJECT_NAME}_static PUBLIC absl::log_internal_check_op)
+endif()
 install(TARGETS ${PROJECT_NAME}_static
         EXPORT ${PROJECT_NAME}_targets
         ARCHIVE DESTINATION "${OSI_INSTALL_LIB_DIR}" COMPONENT lib)
@@ -113,6 +123,12 @@ target_include_directories(${PROJECT_NAME}_pic
         $<INSTALL_INTERFACE:${OSI_INSTALL_INCLUDE_DIR}>
 )
 target_link_libraries(${PROJECT_NAME}_pic PUBLIC protobuf::libprotobuf)
+if(TARGET absl::log)
+    target_link_libraries(${PROJECT_NAME}_pic PUBLIC absl::log)
+endif()
+if(TARGET absl::log_internal_check_op)
+    target_link_libraries(${PROJECT_NAME}_pic PUBLIC absl::log_internal_check_op)
+endif()
 set_property(TARGET ${PROJECT_NAME}_pic PROPERTY POSITION_INDEPENDENT_CODE ON)
 install(TARGETS ${PROJECT_NAME}_pic
         EXPORT ${PROJECT_NAME}_targets
@@ -130,6 +146,12 @@ target_include_directories(${PROJECT_NAME}
         $<INSTALL_INTERFACE:${OSI_INSTALL_INCLUDE_DIR}>
 )
 target_link_libraries(${PROJECT_NAME} PUBLIC protobuf::libprotobuf)
+if(TARGET absl::log)
+    target_link_libraries(${PROJECT_NAME} PUBLIC absl::log)
+endif()
+if(TARGET absl::log_internal_check_op)
+    target_link_libraries(${PROJECT_NAME} PUBLIC absl::log_internal_check_op)
+endif()
 set_property(TARGET ${PROJECT_NAME} PROPERTY SOVERSION ${${PROJECT_NAME}_SOVERSION})
 set_property(TARGET ${PROJECT_NAME} PROPERTY VERSION ${${PROJECT_NAME}_LIBVERSION})
 install(TARGETS ${PROJECT_NAME}
