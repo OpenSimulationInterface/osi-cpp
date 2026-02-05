@@ -73,6 +73,34 @@ if(NOT COMMAND protobuf_generate_cpp)
     include(FindProtobuf)
 endif()
 
+# Protobuf 25+ uses Abseil logging. Link Abseil when available so static libs
+# propagate required symbols to consumers.
+find_package(absl CONFIG QUIET)
+set(OSI_ABSL_TARGETS "")
+if(absl_FOUND)
+  if(TARGET absl::log)
+    list(APPEND OSI_ABSL_TARGETS absl::log)
+  endif()
+  if(TARGET absl::log_internal)
+    list(APPEND OSI_ABSL_TARGETS absl::log_internal)
+  endif()
+  if(TARGET absl::log_internal_check_op)
+    list(APPEND OSI_ABSL_TARGETS absl::log_internal_check_op)
+  endif()
+  if(TARGET absl::check)
+    list(APPEND OSI_ABSL_TARGETS absl::check)
+  endif()
+  if(TARGET absl::base)
+    list(APPEND OSI_ABSL_TARGETS absl::base)
+  endif()
+endif()
+
+function(osi_link_absl target)
+  if(OSI_ABSL_TARGETS)
+    target_link_libraries(${target} PUBLIC ${OSI_ABSL_TARGETS})
+  endif()
+endfunction()
+
 file(GLOB OSI_PROTO_FILES open-simulation-interface/*.proto)
 list(INSERT OSI_PROTO_FILES 0 ${CMAKE_CURRENT_BINARY_DIR}/osi_version.proto)
 
@@ -90,13 +118,7 @@ target_include_directories(${PROJECT_NAME}_static
         $<INSTALL_INTERFACE:${OSI_INSTALL_INCLUDE_DIR}>
 )
 target_link_libraries(${PROJECT_NAME}_static PUBLIC protobuf::libprotobuf)
-find_package(absl CONFIG QUIET)
-if(TARGET absl::log)
-    target_link_libraries(${PROJECT_NAME}_static PUBLIC absl::log)
-endif()
-if(TARGET absl::log_internal_check_op)
-    target_link_libraries(${PROJECT_NAME}_static PUBLIC absl::log_internal_check_op)
-endif()
+osi_link_absl(${PROJECT_NAME}_static)
 install(TARGETS ${PROJECT_NAME}_static
         EXPORT ${PROJECT_NAME}_targets
         ARCHIVE DESTINATION "${OSI_INSTALL_LIB_DIR}" COMPONENT lib)
@@ -126,12 +148,7 @@ target_include_directories(${PROJECT_NAME}_pic
         $<INSTALL_INTERFACE:${OSI_INSTALL_INCLUDE_DIR}>
 )
 target_link_libraries(${PROJECT_NAME}_pic PUBLIC protobuf::libprotobuf)
-if(TARGET absl::log)
-    target_link_libraries(${PROJECT_NAME}_pic PUBLIC absl::log)
-endif()
-if(TARGET absl::log_internal_check_op)
-    target_link_libraries(${PROJECT_NAME}_pic PUBLIC absl::log_internal_check_op)
-endif()
+osi_link_absl(${PROJECT_NAME}_pic)
 set_property(TARGET ${PROJECT_NAME}_pic PROPERTY POSITION_INDEPENDENT_CODE ON)
 install(TARGETS ${PROJECT_NAME}_pic
         EXPORT ${PROJECT_NAME}_targets
@@ -149,12 +166,7 @@ target_include_directories(${PROJECT_NAME}
         $<INSTALL_INTERFACE:${OSI_INSTALL_INCLUDE_DIR}>
 )
 target_link_libraries(${PROJECT_NAME} PUBLIC protobuf::libprotobuf)
-if(TARGET absl::log)
-    target_link_libraries(${PROJECT_NAME} PUBLIC absl::log)
-endif()
-if(TARGET absl::log_internal_check_op)
-    target_link_libraries(${PROJECT_NAME} PUBLIC absl::log_internal_check_op)
-endif()
+osi_link_absl(${PROJECT_NAME})
 set_property(TARGET ${PROJECT_NAME} PROPERTY SOVERSION ${${PROJECT_NAME}_SOVERSION})
 set_property(TARGET ${PROJECT_NAME} PROPERTY VERSION ${${PROJECT_NAME}_LIBVERSION})
 install(TARGETS ${PROJECT_NAME}
